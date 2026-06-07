@@ -1,0 +1,19 @@
+# box.toml — Runbox environment declaration
+# https://github.com/dominionthedev/runbox
+
+[box]
+name    = "guess"
+version = "1"
+
+[env]
+# KEY = "value"
+
+[tools]
+node   = ">=20.0"
+
+[shell]
+mode = "isolated"
+
+[isolation]
+home            = "./.runbox/home"
+binary_strategy = "hybrid"
