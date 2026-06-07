@@ -2,18 +2,17 @@ const http = require("http");
 const { Server } = require("socket.io");
 
 const app = require("./app");
+const setupSockets = require("./sockets");
 
 const server = http.createServer(app);
 
-const io = new Server(server);
-
-io.on("connection", socket => {
-    console.log(`Connected: ${socket.id}`);
-
-    socket.on("disconnect", () => {
-        console.log(`Disconnected: ${socket.id}`);
-    });
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+    }
 });
+
+setupSockets(io);
 
 const PORT = process.env.PORT || 3000;
 

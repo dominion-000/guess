@@ -9,6 +9,9 @@
 
 <p>Socket.IO Assessment</p>
 
+<button onclick="create()">Create</button>
+<button onclick="join()">Join</button>
+
 <script src="/socket.io/socket.io.js"></script>
 
 <script>
@@ -17,6 +20,17 @@ const socket = io();
 socket.on("connect", () => {
     console.log("Connected:", socket.id);
 });
+function create() {
+    socket.emit("create-session", "Dominion", (res) => {
+        console.log("SESSION CREATED:", res);
+    });
+}
+function join() {
+    const id = prompt("Session ID?");
+    socket.emit("join-session", { sessionId: id, name: "Player" }, (res) => {
+        console.log("JOIN:", res);
+    });
+}
 </script>
 
 </body>
