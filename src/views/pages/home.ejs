@@ -7,29 +7,111 @@
 
 <h1>Guessing Game</h1>
 
-<p>Socket.IO Assessment</p>
+<button onclick="createSession()">
+    Create Session
+</button>
 
-<button onclick="create()">Create</button>
-<button onclick="join()">Join</button>
+<button onclick="joinSession()">
+    Join Session
+</button>
+
+<hr>
+
+<pre id="output"></pre>
 
 <script src="/socket.io/socket.io.js"></script>
 
 <script>
 const socket = io();
 
-socket.on("connect", () => {
-    console.log("Connected:", socket.id);
-});
-function create() {
-    socket.emit("create-session", "Dominion", (res) => {
-        console.log("SESSION CREATED:", res);
-    });
+const output =
+    document.getElementById(
+        "output"
+    );
+
+socket.on(
+    "connect",
+    () => {
+        console.log(
+            socket.id
+        );
+    }
+);
+
+socket.on(
+    "session-update",
+    session => {
+        output.textContent =
+            JSON.stringify(
+                session,
+                null,
+                2
+            );
+    }
+);
+
+function createSession() {
+    const name =
+        prompt(
+            "Your name"
+        );
+
+    socket.emit(
+        "create-session",
+        name,
+        response => {
+            console.log(
+                response
+            );
+
+            if (
+                response.error
+            ) {
+                alert(
+                    response.error
+                );
+
+                return;
+            }
+
+            alert(
+                `Session ID: ${response.sessionId}`
+            );
+        }
+    );
 }
-function join() {
-    const id = prompt("Session ID?");
-    socket.emit("join-session", { sessionId: id, name: "Player" }, (res) => {
-        console.log("JOIN:", res);
-    });
+
+function joinSession() {
+    const sessionId =
+        prompt(
+            "Session ID"
+        );
+
+    const name =
+        prompt(
+            "Your name"
+        );
+
+    socket.emit(
+        "join-session",
+        {
+            sessionId,
+            name,
+        },
+        response => {
+            console.log(
+                response
+            );
+
+            if (
+                response.error
+            ) {
+                alert(
+                    response.error
+                );
+            }
+        }
+    );
 }
 </script>
 

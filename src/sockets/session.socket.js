@@ -1,68 +1,230 @@
-const sessionManager = require("../domain/sessionManager");
+const {
+    sessionManager,
+    STATES,
+} = require("../domain/sessionManager");
 
 module.exports = function(io, socket) {
+    socket.on("create-session", (name, cb) => {
+        name = String(name ?? "").trim();
 
-    // Create session
-    socket.on("create-session", (name, callback) => {
-        const session = sessionManager.createSession(socket.id);
+        if (!name) {
+            return cb?.({
+                error: "Name required",
+            });
+        }
+
+        const session =
+            sessionManager.createSession(
+                socket.id
+            );
 
         socket.join(session.id);
 
-        socket.data.sessionId = session.id;
+        socket.data.sessionId =
+            session.id;
         socket.data.name = name;
 
-        session.players.push({
-            socketId: socket.id,
-            name,
-            score: 0
+        sessionManager.addPlayer(
+            session.id,
+            {
+                socketId: socket.id,
+                name,
+                score: 0,
+            }
+        );
+
+        cb?.({
+            success: true,
+            sessionId: session.id,
         });
 
-        callback?.(session);
-        io.to(session.id).emit("session-update", session);
+        io.to(session.id).emit(
+            "session-update",
+            sessionManager.getPublicSession(
+                session.id
+            )
+        );
     });
 
-    // Join session
-    socket.on("join-session", ({ sessionId, name }, callback) => {
-        const session = sessionManager.getSession(sessionId);
+    socket.on(
+        "join-session",
+        ({ sessionId, name }, cb) => {
+            sessionId = String(
+                sessionId ?? ""
+            )
+                .trim()
+                .toUpperCase();
 
-        if (!session) {
-            return callback?.({ error: "Session not found" });
+            name = String(
+                name ?? ""
+            ).trim();
+
+            if (!name) {
+                return cb?.({
+                    error: "Name required",
+                });
+            }
+
+            const session =
+                sessionManager.getSession(
+                    sessionId
+                );
+
+            if (!session) {
+                return cb?.({
+                    error:
+                        "Session not found",
+                });
+            }
+
+            if (
+                session.state ===
+                "PLAYING"
+            ) {
+                return cb?.({
+                    error:
+                        "Game in progress",
+                });
+            }
+
+            socket.join(sessionId);
+
+            socket.data.sessionId =
+                sessionId;
+            socket.data.name = name;
+
+            sessionManager.addPlayer(
+                sessionId,
+                {
+                    socketId: socket.id,
+                    name,
+                    score: 0,
+                }
+            );
+
+            io.to(sessionId).emit(
+                "session-update",
+                sessionManager.getPublicSession(
+                    sessionId
+                )
+            );
+
+            cb?.({
+                success: true,
+            });
         }
+    );
 
-        if (session.state !== "WAITING") {
-            return callback?.({ error: "Game already in progress" });
+    socket.on(
+        "leave-session",
+        () => {
+            const sessionId =
+                socket.data.sessionId;
+
+            if (!sessionId)
+                return;
+
+            socket.leave(sessionId);
+
+            const session =
+                sessionManager.removePlayer(
+                    sessionId,
+                    socket.id
+                );
+
+            socket.data.sessionId =
+                null;
+
+            if (!session)
+                return;
+
+            if (
+                session.players
+                    .length === 0
+            ) {
+                sessionManager.deleteSession(
+                    sessionId
+                );
+
+                return;
+            }
+
+            io.to(sessionId).emit(
+                "session-update",
+                sessionManager.getPublicSession(
+                    sessionId
+                )
+            );
         }
+    );
 
-        socket.join(sessionId);
+    socket.on(
+        "create-round",
+        (
+            { question, answer },
+            cb
+        ) => {
+            const sessionId =
+                socket.data.sessionId;
 
-        socket.data.sessionId = sessionId;
-        socket.data.name = name;
+            const session =
+                sessionManager.getSession(
+                    sessionId
+                );
 
-        session.players.push({
-            socketId: socket.id,
-            name,
-            score: 0
-        });
+            if (!session) {
+                return cb?.({
+                    error:
+                        "No session",
+                });
+            }
 
-        io.to(sessionId).emit("session-update", session);
+            if (
+                session.masterSocketId !==
+                socket.id
+            ) {
+                return cb?.({
+                    error:
+                        "Not game master",
+                });
+            }
 
-        callback?.({ success: true, session });
-    });
+            question = String(
+                question ?? ""
+            ).trim();
 
-    // Leave session
-    socket.on("leave-session", () => {
-        const sessionId = socket.data.sessionId;
-        if (!sessionId) return;
+            answer = String(
+                answer ?? ""
+            )
+                .trim()
+                .toLowerCase();
 
-        socket.leave(sessionId);
+            if (
+                !question ||
+                !answer
+            ) {
+                return cb?.({
+                    error:
+                        "Invalid round",
+                });
+            }
 
-        const session = sessionManager.removePlayer(sessionId, socket.id);
+            sessionManager.createRound(
+                sessionId,
+                question,
+                answer
+            );
 
-        if (session && session.players.length === 0) {
-            sessionManager.deleteSession(sessionId);
-            return;
+            io.to(sessionId).emit(
+                "session-update",
+                sessionManager.getPublicSession(
+                    sessionId
+                )
+            );
+
+            cb?.({
+                success: true,
+            });
         }
-
-        io.to(sessionId).emit("session-update", session);
-    });
+    );
 };
