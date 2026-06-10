@@ -1,6 +1,5 @@
 const {
     sessionManager,
-    STATES,
 } = require("../domain/sessionManager");
 
 module.exports = function(io, socket) {

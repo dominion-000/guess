@@ -5,115 +5,131 @@
 </head>
 <body>
 
+<div id="home-panel">
+
 <h1>Guessing Game</h1>
 
-<button onclick="createSession()">
-    Create Session
+<p>Name</p>
+
+<input id="name">
+
+<br><br>
+
+<p>Session ID</p>
+
+<input id="session">
+
+<br><br>
+
+<button id="create">
+Create Session
 </button>
 
-<button onclick="joinSession()">
-    Join Session
+<button id="join">
+Join Session
 </button>
 
-<hr>
+</div>
 
-<pre id="output"></pre>
+<div
+id="lobby-panel"
+style="display:none;"
+>
+
+<h2>
+
+Session
+
+<span id="session-code"></span>
+
+</h2>
+
+<p>
+
+State:
+
+<span id="session-state"></span>
+
+</p>
+
+<p>
+
+Players:
+
+<span id="player-count"></span>
+
+</p>
+
+<p>
+
+Round Ready:
+
+<span id="round-ready">
+
+No
+
+</span>
+
+</p>
+
+<h3>
+
+Players
+
+</h3>
+
+<ul id="players">
+
+</ul>
+
+<div
+id="master-panel"
+style="display:none;"
+>
+
+<h3>
+
+Game Master
+
+</h3>
+
+<input
+id="question"
+placeholder="Question"
+>
+
+<br><br>
+
+<input
+id="answer"
+placeholder="Answer"
+>
+
+<br><br>
+
+<button
+id="create-round"
+>
+
+Create Round
+
+</button>
+
+</div>
+
+<div
+id="waiting-panel"
+>
+
+Waiting for game master...
+
+</div>
+
+</div>
 
 <script src="/socket.io/socket.io.js"></script>
 
-<script>
-const socket = io();
-
-const output =
-    document.getElementById(
-        "output"
-    );
-
-socket.on(
-    "connect",
-    () => {
-        console.log(
-            socket.id
-        );
-    }
-);
-
-socket.on(
-    "session-update",
-    session => {
-        output.textContent =
-            JSON.stringify(
-                session,
-                null,
-                2
-            );
-    }
-);
-
-function createSession() {
-    const name =
-        prompt(
-            "Your name"
-        );
-
-    socket.emit(
-        "create-session",
-        name,
-        response => {
-            console.log(
-                response
-            );
-
-            if (
-                response.error
-            ) {
-                alert(
-                    response.error
-                );
-
-                return;
-            }
-
-            alert(
-                `Session ID: ${response.sessionId}`
-            );
-        }
-    );
-}
-
-function joinSession() {
-    const sessionId =
-        prompt(
-            "Session ID"
-        );
-
-    const name =
-        prompt(
-            "Your name"
-        );
-
-    socket.emit(
-        "join-session",
-        {
-            sessionId,
-            name,
-        },
-        response => {
-            console.log(
-                response
-            );
-
-            if (
-                response.error
-            ) {
-                alert(
-                    response.error
-                );
-            }
-        }
-    );
-}
-</script>
+<script src="/js/home.js"></script>
 
 </body>
 </html>

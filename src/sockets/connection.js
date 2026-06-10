@@ -1,6 +1,8 @@
-const sessionManager = require("../domain/sessionManager");
+const {
+    sessionManager,
+} = require("../domain/sessionManager");
 
-module.exports = function(io, socket) {
+module.exports = function (io, socket) {
     console.log(`Connected: ${socket.id}`);
 
     socket.data.playerId = null;
@@ -8,18 +10,22 @@ module.exports = function(io, socket) {
     socket.data.name = null;
 
     socket.on("disconnect", () => {
-        console.log(`Disconnected: ${socket.id}`);
+        console.log(
+            `Disconnected: ${socket.id}`
+        );
 
-        const sessionId = socket.data.sessionId;
+        const sessionId =
+            socket.data.sessionId;
 
         if (!sessionId) {
             return;
         }
 
-        const session = sessionManager.removePlayer(
-            sessionId,
-            socket.id
-        );
+        const session =
+            sessionManager.removePlayer(
+                sessionId,
+                socket.id
+            );
 
         socket.leave(sessionId);
 
@@ -27,8 +33,14 @@ module.exports = function(io, socket) {
             return;
         }
 
-        if (session.players.length === 0) {
-            sessionManager.deleteSession(sessionId);
+        if (
+            session.players.length ===
+            0
+        ) {
+            sessionManager.deleteSession(
+                sessionId
+            );
+
             return;
         }
 
