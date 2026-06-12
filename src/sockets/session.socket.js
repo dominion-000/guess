@@ -1,229 +1,108 @@
-const {
-    sessionManager,
-} = require("../domain/sessionManager");
+"use strict";
 
-module.exports = function(io, socket) {
+const { sessionManager } = require("../domain/sessionManager");
+
+module.exports = function (io, socket) {
+
     socket.on("create-session", (name, cb) => {
         name = String(name ?? "").trim();
+        if (!name) return cb?.({ error: "Name is required" });
 
-        if (!name) {
-            return cb?.({
-                error: "Name required",
-            });
-        }
-
-        const session =
-            sessionManager.createSession(
-                socket.id
-            );
+        const session = sessionManager.createSession(socket.id);
 
         socket.join(session.id);
+        socket.data.sessionId = session.id;
+        socket.data.name      = name;
 
-        socket.data.sessionId =
-            session.id;
-        socket.data.name = name;
-
-        sessionManager.addPlayer(
-            session.id,
-            {
-                socketId: socket.id,
-                name,
-                score: 0,
-            }
-        );
-
-        cb?.({
-            success: true,
-            sessionId: session.id,
+        sessionManager.addPlayer(session.id, {
+            socketId: socket.id,
+            name,
+            score: 0,
         });
+
+        cb?.({ success: true, sessionId: session.id, isMaster: true });
 
         io.to(session.id).emit(
             "session-update",
-            sessionManager.getPublicSession(
-                session.id
-            )
+            sessionManager.getPublicSession(session.id)
         );
     });
 
-    socket.on(
-        "join-session",
-        ({ sessionId, name }, cb) => {
-            sessionId = String(
-                sessionId ?? ""
-            )
-                .trim()
-                .toUpperCase();
+    socket.on("join-session", ({ sessionId, name } = {}, cb) => {
+        sessionId = String(sessionId ?? "").trim().toUpperCase();
+        name      = String(name      ?? "").trim();
 
-            name = String(
-                name ?? ""
-            ).trim();
+        if (!name)      return cb?.({ error: "Name is required" });
+        if (!sessionId) return cb?.({ error: "Session ID is required" });
 
-            if (!name) {
-                return cb?.({
-                    error: "Name required",
-                });
-            }
+        const session = sessionManager.getSession(sessionId);
+        if (!session)   return cb?.({ error: "Session not found" });
 
-            const session =
-                sessionManager.getSession(
-                    sessionId
-                );
+        if (session.state === "PLAYING")
+            return cb?.({ error: "Game in progress, cannot join now" });
 
-            if (!session) {
-                return cb?.({
-                    error:
-                        "Session not found",
-                });
-            }
+        const isMaster = session.masterSocketId === socket.id;
 
-            if (
-                session.state ===
-                "PLAYING"
-            ) {
-                return cb?.({
-                    error:
-                        "Game in progress",
-                });
-            }
+        socket.join(sessionId);
+        socket.data.sessionId = sessionId;
+        socket.data.name      = name;
 
-            socket.join(sessionId);
+        sessionManager.addPlayer(sessionId, {
+            socketId: socket.id,
+            name,
+            score: 0,
+        });
 
-            socket.data.sessionId =
-                sessionId;
-            socket.data.name = name;
+        cb?.({ success: true, isMaster });
 
-            sessionManager.addPlayer(
-                sessionId,
-                {
-                    socketId: socket.id,
-                    name,
-                    score: 0,
-                }
-            );
+        io.to(sessionId).emit(
+            "session-update",
+            sessionManager.getPublicSession(sessionId)
+        );
+    });
 
-            io.to(sessionId).emit(
-                "session-update",
-                sessionManager.getPublicSession(
-                    sessionId
-                )
-            );
+    socket.on("leave-session", () => {
+        const sessionId = socket.data.sessionId;
+        if (!sessionId) return;
 
-            cb?.({
-                success: true,
-            });
-        }
-    );
+        socket.leave(sessionId);
+        socket.data.sessionId = null;
 
-    socket.on(
-        "leave-session",
-        () => {
-            const sessionId =
-                socket.data.sessionId;
+        const session = sessionManager.removePlayer(sessionId, socket.id);
+        if (!session) return; // session was deleted (last player left)
 
-            if (!sessionId)
-                return;
+        io.to(sessionId).emit(
+            "session-update",
+            sessionManager.getPublicSession(sessionId)
+        );
+    });
 
-            socket.leave(sessionId);
+    socket.on("create-round", ({ question, answer } = {}, cb) => {
+        const sessionId = socket.data.sessionId;
+        const session   = sessionManager.getSession(sessionId);
 
-            const session =
-                sessionManager.removePlayer(
-                    sessionId,
-                    socket.id
-                );
+        if (!session)
+            return cb?.({ error: "No session" });
 
-            socket.data.sessionId =
-                null;
+        if (session.masterSocketId !== socket.id)
+            return cb?.({ error: "Not game master" });
 
-            if (!session)
-                return;
+        if (session.state === "PLAYING")
+            return cb?.({ error: "Cannot change question while game is in progress" });
 
-            if (
-                session.players
-                    .length === 0
-            ) {
-                sessionManager.deleteSession(
-                    sessionId
-                );
+        question = String(question ?? "").trim();
+        answer   = String(answer   ?? "").trim().toLowerCase();
 
-                return;
-            }
+        if (!question) return cb?.({ error: "Question is required" });
+        if (!answer)   return cb?.({ error: "Answer is required" });
 
-            io.to(sessionId).emit(
-                "session-update",
-                sessionManager.getPublicSession(
-                    sessionId
-                )
-            );
-        }
-    );
+        sessionManager.createRound(sessionId, question, answer);
 
-    socket.on(
-        "create-round",
-        (
-            { question, answer },
-            cb
-        ) => {
-            const sessionId =
-                socket.data.sessionId;
+        cb?.({ success: true });
 
-            const session =
-                sessionManager.getSession(
-                    sessionId
-                );
-
-            if (!session) {
-                return cb?.({
-                    error:
-                        "No session",
-                });
-            }
-
-            if (
-                session.masterSocketId !==
-                socket.id
-            ) {
-                return cb?.({
-                    error:
-                        "Not game master",
-                });
-            }
-
-            question = String(
-                question ?? ""
-            ).trim();
-
-            answer = String(
-                answer ?? ""
-            )
-                .trim()
-                .toLowerCase();
-
-            if (
-                !question ||
-                !answer
-            ) {
-                return cb?.({
-                    error:
-                        "Invalid round",
-                });
-            }
-
-            sessionManager.createRound(
-                sessionId,
-                question,
-                answer
-            );
-
-            io.to(sessionId).emit(
-                "session-update",
-                sessionManager.getPublicSession(
-                    sessionId
-                )
-            );
-
-            cb?.({
-                success: true,
-            });
-        }
-    );
+        io.to(sessionId).emit(
+            "session-update",
+            sessionManager.getPublicSession(sessionId)
+        );
+    });
 };

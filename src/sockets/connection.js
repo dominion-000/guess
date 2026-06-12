@@ -1,54 +1,29 @@
-const {
-    sessionManager,
-} = require("../domain/sessionManager");
+"use strict";
+
+const { sessionManager } = require("../domain/sessionManager");
 
 module.exports = function (io, socket) {
-    console.log(`Connected: ${socket.id}`);
+    console.log(`[+] Connected:    ${socket.id}`);
 
-    socket.data.playerId = null;
+    // Initialise socket data
     socket.data.sessionId = null;
-    socket.data.name = null;
+    socket.data.name      = null;
 
     socket.on("disconnect", () => {
-        console.log(
-            `Disconnected: ${socket.id}`
-        );
+        console.log(`[-] Disconnected: ${socket.id}`);
 
-        const sessionId =
-            socket.data.sessionId;
+        const sessionId = socket.data.sessionId;
+        if (!sessionId) return;
 
-        if (!sessionId) {
-            return;
-        }
-
-        const session =
-            sessionManager.removePlayer(
-                sessionId,
-                socket.id
-            );
+        const session = sessionManager.removePlayer(sessionId, socket.id);
 
         socket.leave(sessionId);
 
-        if (!session) {
-            return;
-        }
-
-        if (
-            session.players.length ===
-            0
-        ) {
-            sessionManager.deleteSession(
-                sessionId
-            );
-
-            return;
-        }
+        if (!session) return;
 
         io.to(sessionId).emit(
             "session-update",
-            sessionManager.getPublicSession(
-                sessionId
-            )
+            sessionManager.getPublicSession(sessionId)
         );
     });
 };
