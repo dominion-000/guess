@@ -1,134 +1,134 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Guessing Game</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guess — Live Guessing Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/home.css" />
 </head>
 <body>
 
 <div id="home-panel">
+  <div class="home-inner">
 
-<h1>Guessing Game</h1>
+    <div class="logo">Guess<span>.</span></div>
+    <div class="logo-sub">Live guessing game</div>
 
-<p>Name</p>
+    <div class="tab-row">
+      <div class="tab active" id="tab-create" onclick="switchTab('create')">Create Session</div>
+      <div class="tab"        id="tab-join"   onclick="switchTab('join')">Join Session</div>
+    </div>
 
-<input id="name">
+    <div class="card">
 
-<br><br>
+      <div class="field">
+        <label for="name-input">Your name</label>
+        <input class="input" id="name-input" type="text"
+               placeholder="Enter your name" maxlength="24" autocomplete="off" />
+        <div class="err-text" id="err-name"></div>
+      </div>
 
-<p>Session ID</p>
+      <div class="field" id="session-field" style="display:none;">
+        <label for="session-input">Session ID</label>
+        <input class="input" id="session-input" type="text"
+               placeholder="e.g. AB12CD" maxlength="6"
+               autocomplete="off" style="text-transform:uppercase;" />
+        <div class="err-text" id="err-session"></div>
+      </div>
 
-<input id="session">
+      <div class="err-text" id="err-general" style="text-align:center; margin-bottom:8px;"></div>
 
-<br><br>
+      <button class="btn primary btn-full" id="action-btn">Create Session</button>
 
-<button id="create">
-Create Session
-</button>
-
-<button id="join">
-Join Session
-</button>
-
+    </div>
+  </div>
 </div>
 
-<div
-id="lobby-panel"
-style="display:none;"
->
+<div id="lobby-panel">
 
-<h2>
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-logo">Guess<span>.</span></span>
+      <span class="session-chip" id="t-session-id"></span>
+      <span class="state-chip waiting" id="t-state">Waiting</span>
+    </div>
+    <div class="topbar-right">
+      <span class="timer" id="t-timer" style="display:none;"></span>
+      <button class="btn danger" id="leave-btn">Leave</button>
+    </div>
+  </header>
 
-Session
+  <!-- Left sidebar: player list -->
+  <aside class="sidebar">
+    <div class="sec-label">Players</div>
+    <div id="players-list"></div>
+  </aside>
 
-<span id="session-code"></span>
+  <!-- Center: chat feed and guess input -->
+  <main class="feed-panel">
+    <div class="feed-header">
+      <div class="sec-label">Game Feed</div>
+    </div>
+    <div class="feed-messages" id="feed"></div>
+    <div class="feed-input-area">
+      <div class="guess-input-wrap">
+        <input class="input" id="guess-input"
+               placeholder="Type your guess..." autocomplete="off" disabled />
+        <span class="attempts-badge" id="attempts-badge"></span>
+      </div>
+      <button class="btn primary" id="send-btn" disabled>Send</button>
+    </div>
+  </main>
 
-</h2>
+  <!-- Right panel: master controls/waiting message -->
+  <aside class="right-panel">
+    <div id="master-panel" style="display:none;">
+      <div class="sec-label">Game Master</div>
 
-<p>
+      <div class="field">
+        <label for="question-input">Question</label>
+        <input class="input" id="question-input"
+               placeholder="What is...?" maxlength="200" />
+        <div class="err-text" id="err-question"></div>
+      </div>
 
-State:
+      <div class="field">
+        <label for="answer-input">Answer</label>
+        <input class="input" id="answer-input"
+               placeholder="The answer..." maxlength="100" />
+        <div class="err-text" id="err-answer"></div>
+      </div>
 
-<span id="session-state"></span>
+      <button class="btn success btn-full" id="create-round-btn">Set Question</button>
+      <div class="err-text" id="err-round" style="text-align:center; margin-top:8px;"></div>
 
-</p>
+      <div style="margin-top:12px;">
+        <button class="btn primary btn-full" id="start-btn" disabled>Start Game</button>
+        <div class="err-text" id="err-start" style="text-align:center; margin-top:8px;"></div>
+      </div>
 
-<p>
+      <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--bdr2);">
+        <div class="sec-label" style="margin-bottom:8px;">Status</div>
+        <div id="master-status" style="font-size:11px; color:var(--muted); line-height:1.8;">
+          Need 3+ players and a question to start.
+        </div>
+      </div>
+    </div>
 
-Players:
+    <div id="waiting-panel">
+      <div class="sec-label">Status</div>
+      <div style="font-size:11px; color:var(--muted); line-height:1.8;" id="waiting-text">
+        Waiting for the game master<span class="cursor"></span>
+      </div>
+    </div>
 
-<span id="player-count"></span>
-
-</p>
-
-<p>
-
-Round Ready:
-
-<span id="round-ready">
-
-No
-
-</span>
-
-</p>
-
-<h3>
-
-Players
-
-</h3>
-
-<ul id="players">
-
-</ul>
-
-<div
-id="master-panel"
-style="display:none;"
->
-
-<h3>
-
-Game Master
-
-</h3>
-
-<input
-id="question"
-placeholder="Question"
->
-
-<br><br>
-
-<input
-id="answer"
-placeholder="Answer"
->
-
-<br><br>
-
-<button
-id="create-round"
->
-
-Create Round
-
-</button>
-
-</div>
-
-<div
-id="waiting-panel"
->
-
-Waiting for game master...
-
-</div>
+  </aside>
 
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-
 <script src="/js/home.js"></script>
 
 </body>
