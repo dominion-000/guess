@@ -2,15 +2,15 @@
 
 const socket = io();
 
-let myName        = "";
-let mySessionId   = null;
-let amIMaster     = false;
-let isPlaying     = false;
-let myAttempts    = 3;
+let myName = "";
+let mySessionId = null;
+let amIMaster = false;
+let isPlaying = false;
+let myAttempts = 3;
 let timerInterval = null;
-let currentMode   = "create"; // "create" | "join"
+let currentMode = "create"; // "create", "join"
 
-const homePanel  = document.getElementById("home-panel");
+const homePanel = document.getElementById("home-panel");
 const lobbyPanel = document.getElementById("lobby-panel");
 
 // HELPERS
@@ -39,9 +39,9 @@ function clearErrors(...ids) {
 
 function setGuessEnabled(enabled) {
     const input = document.getElementById("guess-input");
-    const btn   = document.getElementById("send-btn");
+    const btn = document.getElementById("send-btn");
     input.disabled = !enabled;
-    btn.disabled   = !enabled;
+    btn.disabled = !enabled;
     if (enabled) input.focus();
 }
 
@@ -52,26 +52,28 @@ function updateAttemptsBadge() {
         : "";
 }
 
+// FEED
 function addMsg(type, sender, text) {
     const feed = document.getElementById("feed");
-    const div  = document.createElement("div");
+    const div = document.createElement("div");
     div.className = `msg ${type}`;
-    div.innerHTML  = `<span class="msg-sender">${escHtml(sender)}</span>`
-                   + `<span class="msg-text">${escHtml(text)}</span>`;
+    div.innerHTML = `<span class="msg-sender">${escHtml(sender)}</span>`
+        + `<span class="msg-text">${escHtml(text)}</span>`;
     feed.appendChild(div);
     feed.scrollTop = feed.scrollHeight;
 }
 
 function addBanner(type, title, answerHtml) {
     const feed = document.getElementById("feed");
-    const div  = document.createElement("div");
+    const div = document.createElement("div");
     div.className = `round-banner ${type}`;
-    div.innerHTML  = `<div class="round-banner-title">${escHtml(title)}</div>`
-                   + `<div class="round-banner-answer">${answerHtml}</div>`;
+    div.innerHTML = `<div class="round-banner-title">${escHtml(title)}</div>`
+        + `<div class="round-banner-answer">${answerHtml}</div>`;
     feed.appendChild(div);
     feed.scrollTop = feed.scrollHeight;
 }
 
+// TIMER
 function startTimer(expiresAt) {
     stopTimer();
     const el = document.getElementById("t-timer");
@@ -117,9 +119,9 @@ document.getElementById("action-btn").addEventListener("click", () => {
     if (currentMode === "create") {
         socket.emit("create-session", name, (res) => {
             if (res.error) { showError("err-general", res.error); return; }
-            myName      = name;
+            myName = name;
             mySessionId = res.sessionId;
-            amIMaster   = true;
+            amIMaster = true;
             enterLobby();
         });
     } else {
@@ -128,9 +130,9 @@ document.getElementById("action-btn").addEventListener("click", () => {
 
         socket.emit("join-session", { sessionId: sid, name }, (res) => {
             if (res.error) { showError("err-general", res.error); return; }
-            myName      = name;
+            myName = name;
             mySessionId = sid;
-            amIMaster   = res.isMaster ?? false;
+            amIMaster = res.isMaster ?? false;
             enterLobby();
         });
     }
@@ -144,7 +146,7 @@ document.getElementById("action-btn").addEventListener("click", () => {
 });
 
 function enterLobby() {
-    homePanel.style.display  = "none";
+    homePanel.style.display = "none";
     lobbyPanel.style.display = "grid";
     addMsg("system", "System", mySessionId
         ? `Joined session ${mySessionId}`
@@ -160,13 +162,13 @@ document.getElementById("leave-btn").addEventListener("click", () => {
     myName = ""; mySessionId = null; amIMaster = false;
     isPlaying = false; myAttempts = 3;
 
-    document.getElementById("feed").innerHTML         = "";
+    document.getElementById("feed").innerHTML = "";
     document.getElementById("players-list").innerHTML = "";
-    document.getElementById("name-input").value       = "";
-    document.getElementById("session-input").value    = "";
+    document.getElementById("name-input").value = "";
+    document.getElementById("session-input").value = "";
 
     lobbyPanel.style.display = "none";
-    homePanel.style.display  = "flex";
+    homePanel.style.display = "flex";
 });
 
 document.getElementById("create-round-btn").addEventListener("click", () => {
@@ -176,13 +178,13 @@ document.getElementById("create-round-btn").addEventListener("click", () => {
     const a = document.getElementById("answer-input").value.trim();
 
     if (!q) { showError("err-question", "Question is required"); return; }
-    if (!a) { showError("err-answer",   "Answer is required");   return; }
+    if (!a) { showError("err-answer", "Answer is required"); return; }
 
     socket.emit("create-round", { question: q, answer: a }, (res) => {
         if (res.error) { showError("err-round", res.error); return; }
         addMsg("system", "System", "Question set ✓");
         document.getElementById("question-input").value = "";
-        document.getElementById("answer-input").value   = "";
+        document.getElementById("answer-input").value = "";
     });
 });
 
@@ -193,10 +195,11 @@ document.getElementById("start-btn").addEventListener("click", () => {
     });
 });
 
+// GUESS
 function sendGuess() {
-    const input   = document.getElementById("guess-input");
+    const input = document.getElementById("guess-input");
     const sendBtn = document.getElementById("send-btn");
-    const guess   = input.value.trim();
+    const guess = input.value.trim();
 
     if (!guess || !isPlaying) return;
 
@@ -204,7 +207,7 @@ function sendGuess() {
 
     socket.emit("submit-guess", guess, (res) => {
         sendBtn.disabled = false;
-        input.value      = "";
+        input.value = "";
 
         if (res.error) {
             addMsg("system", "System", res.error);
@@ -249,7 +252,7 @@ socket.on("session-update", (session) => {
 
     const stateEl = document.getElementById("t-state");
     stateEl.textContent = session.state;
-    stateEl.className   = `state-chip ${session.state.toLowerCase()}`;
+    stateEl.className = `state-chip ${session.state.toLowerCase()}`;
 
     const list = document.getElementById("players-list");
     list.innerHTML = "";
@@ -257,22 +260,22 @@ socket.on("session-update", (session) => {
     const newAmIMaster = session.masterSocketId === socket.id;
 
     session.players.forEach((p) => {
-        const isMe     = p.socketId === socket.id;
+        const isMe = p.socketId === socket.id;
         const isMaster = p.isMaster;
 
         const div = document.createElement("div");
         div.className = [
             "player-item",
-            isMe     ? "me"     : "",
+            isMe ? "me" : "",
             isMaster ? "master" : "",
         ].filter(Boolean).join(" ");
 
         div.innerHTML =
             `<div class="player-avatar">${escHtml(p.name[0].toUpperCase())}</div>`
-          + `<span class="player-name">${escHtml(p.name)}`
-          + (isMe ? ` <span class="you-tag">(you)</span>` : "")
-          + `</span>`
-          + `<span class="player-score">${p.score}</span>`;
+            + `<span class="player-name">${escHtml(p.name)}`
+            + (isMe ? ` <span class="you-tag">(you)</span>` : "")
+            + `</span>`
+            + `<span class="player-score">${p.score}</span>`;
 
         list.appendChild(div);
     });
@@ -281,22 +284,27 @@ socket.on("session-update", (session) => {
     const masterJustChanged = newAmIMaster && !amIMaster;
     amIMaster = newAmIMaster;
 
-    document.getElementById("master-panel").style.display  = amIMaster ? "block" : "none";
-    document.getElementById("waiting-panel").style.display = amIMaster ? "none"  : "block";
+    document.getElementById("master-panel").style.display = amIMaster ? "block" : "none";
+    document.getElementById("waiting-panel").style.display = amIMaster ? "none" : "block";
 
     if (masterJustChanged) {
         addMsg("system", "System", "You are now the Game Master — set a new question!");
     }
 
     if (amIMaster) {
-        const canStart  = session.state === "READY";
-        const startBtn  = document.getElementById("start-btn");
-        startBtn.disabled = !canStart || session.state === "PLAYING";
+        const canStart = session.state === "READY";
+        const isActive = session.state === "PLAYING";
+
+        document.getElementById("start-btn").disabled = !canStart || isActive;
+        document.getElementById("create-round-btn").disabled = session.roundReady || isActive;
+        document.getElementById("question-input").disabled = session.roundReady || isActive;
+        document.getElementById("answer-input").disabled = session.roundReady || isActive;
 
         const hints = [];
-        if (session.playerCount < 3)  hints.push(`Need ${3 - session.playerCount} more player(s)`);
-        if (!session.roundReady)       hints.push("Set a question first");
-        if (canStart)                  hints.push("Ready to start!");
+        if (session.playerCount < 3) hints.push(`Need ${3 - session.playerCount} more player(s)`);
+        if (!session.roundReady) hints.push("Set a question first");
+        else hints.push("Question set ✓");
+        if (canStart) hints.push("Ready to start!");
         document.getElementById("master-status").textContent = hints.join(" · ");
     }
 
@@ -307,18 +315,20 @@ socket.on("session-update", (session) => {
             : "Waiting for game master...";
     }
 
-    // Disable guessing outside of PLAYING
-    if (session.state !== "PLAYING" && isPlaying) {
-        isPlaying = false;
-        setGuessEnabled(false);
-        updateAttemptsBadge();
+    if (session.state !== "PLAYING") {
+        if (timerInterval) stopTimer();
+        if (isPlaying) {
+            isPlaying = false;
+            setGuessEnabled(false);
+            updateAttemptsBadge();
+        }
     }
 });
 
 socket.on("game-started", (data) => {
     document.getElementById("feed").innerHTML = "";
 
-    isPlaying  = !amIMaster;
+    isPlaying = !amIMaster;
     myAttempts = 3;
     updateAttemptsBadge();
 
@@ -329,7 +339,7 @@ socket.on("game-started", (data) => {
         setGuessEnabled(true);
         startTimer(data.expiresAt);
     } else {
-        addMsg("system", "System", "You set this question. You cannot guess!");
+        addMsg("system", "System", "You set this question. Watch the action!");
     }
 });
 
@@ -357,11 +367,19 @@ socket.on("round-ended", (roundResult) => {
             `🏆 ${roundResult.winnerName} wins!`,
             `Answer: <span>${escHtml(roundResult.answer)}</span>`
         );
-    } else {
+    } else if (roundResult.reason === "timeout") {
         addBanner(
             "timeout",
             "⏰ Time's up!",
             `The answer was: <span>${escHtml(roundResult.answer)}</span>`
+        );
+    } else if (roundResult.reason === "aborted") {
+        addBanner(
+            "timeout",
+            "⚠️ Round ended — not enough players",
+            roundResult.answer
+                ? `The answer was: <span>${escHtml(roundResult.answer)}</span>`
+                : ""
         );
     }
 });
