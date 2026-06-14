@@ -5,7 +5,6 @@ const { sessionManager } = require("../domain/sessionManager");
 module.exports = function (io, socket) {
     console.log(`[+] Connected:    ${socket.id}`);
 
-    // Initialise socket data
     socket.data.sessionId = null;
     socket.data.name      = null;
 
@@ -14,16 +13,18 @@ module.exports = function (io, socket) {
 
         const sessionId = socket.data.sessionId;
         if (!sessionId) return;
-
-        const session = sessionManager.removePlayer(sessionId, socket.id);
-
         socket.leave(sessionId);
 
-        if (!session) return;
+        const result = sessionManager.removePlayer(sessionId, socket.id);
 
-        io.to(sessionId).emit(
-            "session-update",
-            sessionManager.getPublicSession(sessionId)
-        );
+        if (!result) return;
+
+        const { roundAborted, abortedRoundInfo } = result;
+
+        if (roundAborted && abortedRoundInfo) {
+            io.to(sessionId).emit("round-ended", abortedRoundInfo);
+        }
+        const updated = sessionManager.getPublicSession(sessionId);
+        if (updated) io.to(sessionId).emit("session-update", updated);
     });
 };

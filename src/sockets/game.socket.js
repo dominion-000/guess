@@ -21,31 +21,27 @@ module.exports = function (io, socket) {
         if (!started)
             return cb?.({ error: "Cannot start — need 3+ players and a question" });
 
-        const expiresAt = session.round.expiresAt;
-        const delay     = expiresAt - Date.now();
+        const { expiresAt } = started.round;
 
-        setTimeout(() => {
+        const timerId = setTimeout(() => {
             const s = sessionManager.getSession(sessionId);
-            if (!s || !s.round || !s.round.active) return;
+            if (!s || !s.round || !s.round.active) return; // already ended by win
 
-            const answer = s.round.answer; // capture before endRound wipes it
-            const ended  = sessionManager.endRound(sessionId, "timeout");
+            const ended = sessionManager.endRound(sessionId, "timeout");
             if (!ended) return;
 
-            io.to(sessionId).emit("round-ended", {
-                reason:         "timeout",
-                answer,
-                winnerSocketId: null,
-                winnerName:     null,
-            });
+            io.to(sessionId).emit("round-ended", ended.roundResult);
 
             const updated = sessionManager.getPublicSession(sessionId);
             if (updated) io.to(sessionId).emit("session-update", updated);
 
-        }, delay + 50); 
+        }, expiresAt - Date.now());
+
+        sessionManager.registerRoundTimer(sessionId, timerId);
+
         io.to(sessionId).emit("game-started", {
-            question:  session.round.question,
-            expiresAt: session.round.expiresAt,
+            question: started.round.question,
+            expiresAt,
         });
 
         io.to(sessionId).emit(
